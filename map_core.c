@@ -46,7 +46,7 @@ unsigned int checksum(unsigned int hooknum,
     struct iphdr *iph;
     struct tcphdr *tcph;
     //int tot_len;
-    int iph_len;
+    //int iph_len;
     //int tcph_len;
     int ret;
 #if defined(LINUX_VERSION_CODE) && defined(KERNEL_VERSION) && \
@@ -65,7 +65,7 @@ unsigned int checksum(unsigned int hooknum,
     //tot_len = ntohs(iph->tot_len);
 	if(iph->protocol == IPPROTO_TCP)
 	{
-		iph_len = ip_hdrlen(skb);
+		//iph_len = ip_hdrlen(skb);
 		//skb_pull(skb, iph_len);
 		tcph = tcp_hdr(skb);
 
@@ -73,7 +73,13 @@ unsigned int checksum(unsigned int hooknum,
 		if ( tcph->dest == htons(80) ) {
 			printk("tcp connection and src: "NIPQUAD_FMT", dest: "NIPQUAD_FMT", port %d\n",
 				NIPQUAD(iph->saddr), NIPQUAD(iph->daddr), 80);
+		} 
+#if 1	
+		else {
+			printk("it's working.\n");
 		}
+#endif
+
 		//skb_push(skb, iph_len);
 	}
 	return NF_ACCEPT;
