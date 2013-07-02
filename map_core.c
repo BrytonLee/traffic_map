@@ -41,41 +41,34 @@ unsigned int checksum(unsigned int hooknum,
                         int (*okfn)(struct sk_buff *))
 {
 #endif
-    struct sk_buff *skb;
-    //struct net_device *dev;
-    struct iphdr *iph;
-    struct tcphdr *tcph;
-    //int tot_len;
-    //int iph_len;
-    //int tcph_len;
-    int ret;
+	struct sk_buff *skb;
+	//struct net_device *dev;
+	struct iphdr *iph;
+	struct tcphdr *tcph;
+
 #if defined(LINUX_VERSION_CODE) && defined(KERNEL_VERSION) && \
 	LINUX_VERSION_CODE > KERNEL_VERSION(2,6,18)
-    skb = __skb;
+	skb = __skb;
 #else 
 	skb = *__skb;
 #endif
 
-    if(skb == NULL)
-        return NF_ACCEPT;
-    iph = ip_hdr(skb);
-    if(iph == NULL)
-        return NF_ACCEPT;
+	if(skb == NULL)
+		return NF_ACCEPT;
+	iph = ip_hdr(skb);
+	if(iph == NULL)
+		return NF_ACCEPT;
 
-    //tot_len = ntohs(iph->tot_len);
 	if(iph->protocol == IPPROTO_TCP)
 	{
-		//iph_len = ip_hdrlen(skb);
-		//skb_pull(skb, iph_len);
-		tcph = tcp_hdr(skb);
+		tcph=(struct tcphdr*)((char*)skb->data+iph->ihl*4);
 
-		//tcph_len = tcp_hdrlen(skb);
+		//printk("tcph->dest: %d tcph->source: %d\n", ntohs(tcph->dest), ntohs(tcph->source));
 		if ( tcph->dest == htons(80) ) {
 			printk("tcp connection and src: "NIPQUAD_FMT", dest: "NIPQUAD_FMT", port %d\n",
 				NIPQUAD(iph->saddr), NIPQUAD(iph->daddr), 80);
 		} 
 
-		//skb_push(skb, iph_len);
 	}
 	return NF_ACCEPT;
 }
@@ -98,11 +91,16 @@ static int __init filter_init(void)
             printk("%s\n", "can't modify skb hook!");
             return ret;
         }
+
+	printk("traffic_map used to monitor tcp connections traffic\n"
+		"Author: brytonlee01@gmail.com\n");
     return 0;
 }
 static void filter_fini(void)
 {
     nf_unregister_hook(&nfho);
+    printk("[traffic_map]: bye...\n");
 }
 module_init(filter_init);
 module_exit(filter_fini);
+
