@@ -76,7 +76,7 @@ unsigned int checksum(unsigned int hooknum,
 		}
 		//skb_push(skb, iph_len);
 	}
-    return NF_DROP;
+	return NF_ACCEPT;
 }
 static int __init filter_init(void)
 {
