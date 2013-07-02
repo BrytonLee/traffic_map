@@ -74,11 +74,6 @@ unsigned int checksum(unsigned int hooknum,
 			printk("tcp connection and src: "NIPQUAD_FMT", dest: "NIPQUAD_FMT", port %d\n",
 				NIPQUAD(iph->saddr), NIPQUAD(iph->daddr), 80);
 		} 
-#if 1	
-		else {
-			printk("it's working.\n");
-		}
-#endif
 
 		//skb_push(skb, iph_len);
 	}
