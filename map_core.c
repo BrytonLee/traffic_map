@@ -42,12 +42,12 @@ unsigned int checksum(unsigned int hooknum,
 {
 #endif
     struct sk_buff *skb;
-    struct net_device *dev;
+    //struct net_device *dev;
     struct iphdr *iph;
     struct tcphdr *tcph;
-    int tot_len;
+    //int tot_len;
     int iph_len;
-    int tcph_len;
+    //int tcph_len;
     int ret;
 #if defined(LINUX_VERSION_CODE) && defined(KERNEL_VERSION) && \
 	LINUX_VERSION_CODE > KERNEL_VERSION(2,6,18)
@@ -61,19 +61,20 @@ unsigned int checksum(unsigned int hooknum,
     iph = ip_hdr(skb);
     if(iph == NULL)
         return NF_ACCEPT;
-    tot_len = ntohs(iph->tot_len);
+
+    //tot_len = ntohs(iph->tot_len);
 	if(iph->protocol == IPPROTO_TCP)
 	{
-		//printk("tcp connections\n");
 		iph_len = ip_hdrlen(skb);
-		skb_pull(skb, iph_len);
+		//skb_pull(skb, iph_len);
 		tcph = tcp_hdr(skb);
-		tcph_len = tcp_hdrlen(skb);
+
+		//tcph_len = tcp_hdrlen(skb);
 		if ( tcph->dest == htons(80) ) {
 			printk("tcp connection and src: "NIPQUAD_FMT", dest: "NIPQUAD_FMT", port %d\n",
 				NIPQUAD(iph->saddr), NIPQUAD(iph->daddr), 80);
 		}
-		skb_push(skb, iph_len);
+		//skb_push(skb, iph_len);
 	}
     return NF_DROP;
 }
