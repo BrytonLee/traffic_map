@@ -1,4 +1,4 @@
-obj-m := map_core.o
+obj-m := map_core.o traffic_entry.o
 
 PWD := $(shell pwd)
 KDIR := /lib/modules/$(shell uname -r)/build
