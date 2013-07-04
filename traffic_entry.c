@@ -1,14 +1,21 @@
 #include "traffic_entry.h"
+#include <linux/version.h>
 #include <linux/slab.h>
 
-static kmem_cache_t *traffic_entry_cache=NULL;
+static struct kmem_cache *traffic_entry_cache=NULL;
 
 int traffic_entry_init()
 {
 	int ret = -1;
-
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,22)
+/*----------------------------------------------------------------------------
+ * In 2.6.23, the last argument was dropped from kmem_cache_create. */
 	traffic_entry_cache = kmem_cache_create("traffic_entry_cache",
-			sizeof(struct _traffic_entry), 0, NULL, NULL);
+			sizeof(struct _traffic_entry), 0, 0, NULL, NULL);
+#else
+	traffic_entry_cache = kmem_cache_create("traffic_entry_cache",
+			sizeof(struct _traffic_entry), 0, 0, NULL);
+#endif
 	if ( !traffic_entry_cache ) {
 		printk("kmem_cache_create error\n");
 		return ret;
@@ -46,7 +53,7 @@ int traffic_entry_destory()
 	/* TODO: free cache list */
 
 	if (traffic_entry_cache)
-		kmem_cache_destory(traffic_entry_cache);
+		kmem_cache_destroy(traffic_entry_cache);
 	
 	ret = 0;
 	return ret;
