@@ -10,6 +10,7 @@
 #include <linux/inet.h> /*in_aton()*/
 #include <net/ip.h>
 #include <net/tcp.h>
+#include <linux/timer.h>
 #include "traffic_entry.h"
 
 MODULE_LICENSE("GPL");
@@ -34,10 +35,61 @@ struct nf_hook_ops nf_out;
 static unsigned short ports_array[PORTS_MAX];
 int narr;
 
+static struct timer_list traffic_timer;
+
 module_param_array(ports_array, ushort, &narr, 0644);
 MODULE_PARM_DESC(ports_array, "ports_array: pass a port array to traffic_map module.");
 
-static void tcp_info(struct sk_buff *skb, struct iphdr *iph, struct tcphdr *tcph)
+void entry_dump(unsigned long data)
+{
+	int ret = 0;
+
+	traffic_entry_dump();
+
+	ret = mod_timer(&traffic_timer, jiffies + msecs_to_jiffies(30 * 1000) );
+	if (ret) printk("Error in mod_timer\n");
+}
+
+static void tcp_record(const struct sk_buff *skb, const struct iphdr *iph, 
+	const struct tcphdr *tcph)
+{
+//	unsigned int daddr;
+//	unsigned int saddr;
+//	unsigned short sport;
+//	unsigned short dport;
+	traffic_entry_t *entry = NULL;
+
+	int tot_len; /* packet data totoal length */
+	int iph_len;
+	int tcph_len;
+	int tcp_load;
+
+	tot_len = ntohs(iph->tot_len);
+	iph_len = ip_hdrlen(skb);
+	tcph_len = tcph->doff * 4;
+	tcp_load = tot_len - ( iph_len + tcph_len );
+
+	//saddr = ntohl(iph->saddr);
+	//daddr = ntohl(iph->daddr);
+	//sport = ntohs(tcph->source);
+	//dport = ntohs(tcph->dest);
+
+	entry = traffic_entry_search(iph->saddr, iph->daddr);	
+	if ( entry ) {
+		entry->load += tcp_load;
+	} else {
+		entry = traffic_entry_new(iph->saddr, iph->daddr, tcph->source, tcph->dest);
+		if ( !entry ) {
+			//printk("alloc memory failed!\n");
+			return;
+		}	
+		entry->load = tcp_load;
+	}
+
+}
+
+static void tcp_info(const struct sk_buff *skb, const struct iphdr *iph,
+	const struct tcphdr *tcph)
 {
 	int tot_len; /* packet data totoal length */
 	int iph_len;
@@ -102,7 +154,8 @@ unsigned int filter_out(unsigned int hooknum,
 		for ( i = 0; i < narr; i++ ) {
 			port = ports_array[i];
 			if ( tcph->source == htons(port) )
-				tcp_info(skb, iph, tcph);
+				//tcp_info(skb, iph, tcph);
+				tcp_record(skb, iph, tcph);
 		}
 	}
 	
@@ -152,7 +205,8 @@ unsigned int filter_pre_route(unsigned int hooknum,
 		for ( i = 0; i < narr; i++ ) {
 			port = ports_array[i];
 			if ( tcph->dest == htons(port) )
-				tcp_info(skb, iph, tcph);
+				//tcp_info(skb, iph, tcph);
+				tcp_record(skb, iph, tcph);
 		}
 
 	}
@@ -214,12 +268,25 @@ static int __init filter_init(void)
 		printk("%s\n", "can't modify skb hook!");
 		return ret;
 	}
+	
+	/* install timer */
+	setup_timer(&traffic_timer, entry_dump, 0);
+	
+	/* 30 seconds call timer function */
+	ret = mod_timer(&traffic_timer, jiffies + msecs_to_jiffies(30 * 1000) );
+	if (ret) printk("Error in mod_timer\n");
 
 	return 0;
 }
 
 static void filter_fini(void)
 {
+	int ret = 0;
+
+	ret = del_timer(&traffic_timer);
+	if ( ret ) 
+		printk("The traffic_timer is still in use...\n");
+
 	traffic_entry_destory();
 	nf_unregister_hook(&nf_pre_route);
 	nf_unregister_hook(&nf_out);
